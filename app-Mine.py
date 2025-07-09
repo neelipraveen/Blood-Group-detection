@@ -1,10 +1,15 @@
+import os
+import requests
+from flask import Flask, render_template, request, send_file
+from markupsafe import Markup
+import numpy as np
+from PIL import Image
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
 # ===============================================
 # 🔽 MODEL DOWNLOAD FROM GOOGLE DRIVE
 # ===============================================
-
-import os
-import requests
-
 MODEL_PATH = "model_blood_group_detection.h5"
 GDRIVE_FILE_ID = "1Ax6p_6hNrggVAtu2EN5qjzRmOEd5T8j1"
 
@@ -22,28 +27,14 @@ def download_model():
 download_model()
 
 # ===============================================
-# 🌐 FLASK IMPORTS & MODULES
-# ===============================================
-
-from flask import Flask, render_template, request, send_file
-from markupsafe import Markup
-import numpy as np
-from PIL import Image
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from io import BytesIO
-
-# ===============================================
 # 🧠 MODEL UTILITIES
 # ===============================================
-
 disease_dic = ['A+', 'A-', 'AB+', 'AB-', 'B+', 'B-', 'O+', 'O-']
 from model_predict import pred_leaf_disease
 
 # ===============================================
 # 🚀 FLASK APP SETUP
 # ===============================================
-
 app = Flask(__name__)
 
 # -----------------------------------------------
@@ -65,29 +56,33 @@ def disease_prediction():
         file = request.files.get('file')
         img = Image.open(file).convert('RGB')
 
-        # Form data
-        patient_id = request.form.get('patient_id')
-        patient_name = request.form.get('patient_name')
-        age = request.form.get('age')
-        date = request.form.get('date')
-        gender = request.form.get('gender')
-        safe_name = patient_name.replace(" ", "_")
+        # Save temp image for prediction
+        temp_image_path = 'temp_uploaded_image.BMP'
+        img.save(temp_image_path)
 
-        # Prediction
-        img.save('output.BMP')  # for prediction
-        prediction = pred_leaf_disease("output.BMP")
-        prediction = str(disease_dic[prediction])
+        # Predict blood group
+        prediction_index = pred_leaf_disease(temp_image_path)
+        prediction = str(disease_dic[prediction_index])
         precaution = prediction
+
+        # Form data
+        patient_id = request.form.get('patient_id') or "UnknownID"
+        patient_name = request.form.get('patient_name') or "UnknownName"
+        age = request.form.get('age') or "N/A"
+        date = request.form.get('date') or "N/A"
+        gender = request.form.get('gender') or "N/A"
+        safe_name = patient_name.replace(" ", "_")
 
         print(f"🩸 Blood Group: {prediction}")
         print(f"📝 Patient: {patient_id}, {patient_name}, {age}, {date}, {gender}")
 
-        # Generate dynamic PDF filename
-        safe_name = patient_name.replace(" ", "_")
-        pdf_filename = f"medical_report_{safe_name}.pdf"
-        pdf_path = os.path.join(folder_name, pdf_filename)
+        # Folder + file setup
+        folder_name = f"{safe_name}_{patient_id}"
+        os.makedirs(folder_name, exist_ok=True)
+        pdf_file = f"medical_report_{safe_name}.pdf"
+        pdf_path = os.path.join(folder_name, pdf_file)
 
-        # Create PDF
+        # Create and save PDF
         c = canvas.Canvas(pdf_path, pagesize=letter)
         c.setFontSize(16)
         c.drawString(50, 750, "Medical Report")
@@ -99,32 +94,36 @@ def disease_prediction():
         c.drawString(50, 620, f"Gender: {gender}")
         c.drawString(50, 600, f"Predicted Blood Group: {prediction}")
 
-        # Insert image in PDF
         try:
-            c.drawImage(image_path, 350, 600, width=150, height=150)
+            c.drawImage(temp_image_path, 350, 600, width=150, height=150)
         except Exception as e:
-            print("⚠️ Failed to embed image:", e)
+            print("⚠️ Failed to embed image in PDF:", e)
 
         c.save()
+        if os.path.exists(temp_image_path):
+            os.remove(temp_image_path)
 
-        # Send PDF to client
-        pdf_buffer.seek(0)
-        return send_file(pdf_buffer,
-                         as_attachment=True,
-                         download_name=f"medical_report_{safe_name}.pdf",
-                         mimetype='application/pdf')
+        # Pass info to result page
+        return render_template(
+            'disease-result.html',
+            title=title,
+            prediction=prediction,
+            precaution=precaution,
+            folder_name=folder_name,
+            pdf_file=pdf_file
+        )
 
     return render_template('disease.html', title=title)
 
 # -----------------------------------------------
-# Manual Report Download Endpoint (Legacy)
+# Manual PDF Download Endpoint
 # -----------------------------------------------
 @app.route('/download-report/<folder_name>/<pdf_file>')
 def download_report(folder_name, pdf_file):
     file_path = os.path.join(folder_name, pdf_file)
     if os.path.exists(file_path):
         return send_file(file_path, as_attachment=True)
-    return "Report not found", 404
+    return "❌ Report not found", 404
 
 # ===============================================
 # 🔁 APP RUNNER
