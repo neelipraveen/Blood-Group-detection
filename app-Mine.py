@@ -28,10 +28,10 @@ download_model()
 from flask import Flask, render_template, request, send_file
 from markupsafe import Markup
 import numpy as np
-import pandas as pd
 from PIL import Image
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+from io import BytesIO
 
 # ===============================================
 # 🧠 MODEL UTILITIES
@@ -57,9 +57,6 @@ def home():
 # -----------------------------------------------
 # Disease Prediction Endpoint
 # -----------------------------------------------
-from io import BytesIO
-import shutil
-
 @app.route('/disease-predict', methods=['GET', 'POST'])
 def disease_prediction():
     title = 'Blood Grouping Detection Using Image Processing'
@@ -76,17 +73,9 @@ def disease_prediction():
         gender = request.form.get('gender')
         safe_name = patient_name.replace(" ", "_")
 
-        # Save image temporarily
-        temp_image = BytesIO()
-        img.save(temp_image, format='BMP')
-        temp_image.seek(0)
-
-        # Predict
-        with open("temp.BMP", "wb") as f:
-            f.write(temp_image.read())
-
-        prediction = pred_leaf_disease("temp.BMP")
-        prediction = str(disease_dic[prediction])
+        # Prediction directly from PIL image
+        prediction_idx = pred_leaf_disease(img)
+        prediction = str(disease_dic[prediction_idx])
         precaution = prediction
 
         # Prepare PDF in memory
@@ -103,9 +92,6 @@ def disease_prediction():
         c.drawString(50, 600, f"Predicted Blood Group: {prediction}")
         c.save()
 
-        # Clean up
-        os.remove("temp.BMP")
-
         # Send PDF to client
         pdf_buffer.seek(0)
         return send_file(pdf_buffer,
@@ -115,10 +101,8 @@ def disease_prediction():
 
     return render_template('disease.html', title=title)
 
-
-
 # -----------------------------------------------
-# Manual Report Download Endpoint
+# Manual Report Download Endpoint (Legacy)
 # -----------------------------------------------
 @app.route('/download-report/<folder_name>/<pdf_file>')
 def download_report(folder_name, pdf_file):
