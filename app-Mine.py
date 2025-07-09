@@ -73,14 +73,22 @@ def disease_prediction():
         gender = request.form.get('gender')
         safe_name = patient_name.replace(" ", "_")
 
-        # Prediction directly from PIL image
-        prediction_idx = pred_leaf_disease(img)
-        prediction = str(disease_dic[prediction_idx])
+        # Prediction
+        img.save('output.BMP')  # for prediction
+        prediction = pred_leaf_disease("output.BMP")
+        prediction = str(disease_dic[prediction])
         precaution = prediction
 
-        # Prepare PDF in memory
-        pdf_buffer = BytesIO()
-        c = canvas.Canvas(pdf_buffer, pagesize=letter)
+        print(f"🩸 Blood Group: {prediction}")
+        print(f"📝 Patient: {patient_id}, {patient_name}, {age}, {date}, {gender}")
+
+        # Generate dynamic PDF filename
+        safe_name = patient_name.replace(" ", "_")
+        pdf_filename = f"medical_report_{safe_name}.pdf"
+        pdf_path = os.path.join(folder_name, pdf_filename)
+
+        # Create PDF
+        c = canvas.Canvas(pdf_path, pagesize=letter)
         c.setFontSize(16)
         c.drawString(50, 750, "Medical Report")
         c.setFontSize(12)
@@ -90,6 +98,13 @@ def disease_prediction():
         c.drawString(50, 640, f"Date: {date}")
         c.drawString(50, 620, f"Gender: {gender}")
         c.drawString(50, 600, f"Predicted Blood Group: {prediction}")
+
+        # Insert image in PDF
+        try:
+            c.drawImage(image_path, 350, 600, width=150, height=150)
+        except Exception as e:
+            print("⚠️ Failed to embed image:", e)
+
         c.save()
 
         # Send PDF to client
