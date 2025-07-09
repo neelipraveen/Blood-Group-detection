@@ -1,0 +1,14 @@
+# Ignore virtual environment
+venv/
+__pycache__/
+
+# Ignore model weights
+*.h5
+
+# Ignore other large files
+*.dll
+*.pyd
+
+# Ignore temporary files
+*.log
+*.tmp
