@@ -78,11 +78,16 @@ def disease_prediction():
         image_path = os.path.join(folder_name, 'uploaded_image.jpg')
         img.save(image_path)
 
-        # Prediction
-        img.save('output.BMP')  # for prediction
-        prediction = pred_leaf_disease("output.BMP")
+        # 🔽 Save temp BMP file and Predict
+        temp_bmp_path = "output.BMP"
+        img.save(temp_bmp_path)
+        prediction = pred_leaf_disease(temp_bmp_path)
         prediction = str(disease_dic[prediction])
         precaution = prediction
+
+        # 🔁 Clean up temp file to reduce memory usage
+        if os.path.exists(temp_bmp_path):
+            os.remove(temp_bmp_path)
 
         print(f"🩸 Blood Group: {prediction}")
         print(f"📝 Patient: {patient_id}, {patient_name}, {age}, {date}, {gender}")
@@ -105,7 +110,6 @@ def disease_prediction():
         c.drawString(50, 620, f"Gender: {gender}")
         c.drawString(50, 600, f"Predicted Blood Group: {prediction}")
 
-        # Insert image in PDF
         try:
             c.drawImage(image_path, 350, 600, width=150, height=150)
         except Exception as e:
@@ -121,6 +125,7 @@ def disease_prediction():
                                pdf_file=pdf_filename)
 
     return render_template('disease.html', title=title)
+
 
 # -----------------------------------------------
 # Manual Report Download Endpoint
