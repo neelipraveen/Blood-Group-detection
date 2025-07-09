@@ -57,51 +57,43 @@ def home():
 # -----------------------------------------------
 # Disease Prediction Endpoint
 # -----------------------------------------------
+from io import BytesIO
+import shutil
+
 @app.route('/disease-predict', methods=['GET', 'POST'])
 def disease_prediction():
     title = 'Blood Grouping Detection Using Image Processing'
 
     if request.method == 'POST':
         file = request.files.get('file')
-        img = Image.open(file).convert('RGB')  # Ensure JPEG-safe format
+        img = Image.open(file).convert('RGB')
 
-        # Form details
+        # Form data
         patient_id = request.form.get('patient_id')
         patient_name = request.form.get('patient_name')
         age = request.form.get('age')
         date = request.form.get('date')
         gender = request.form.get('gender')
+        safe_name = patient_name.replace(" ", "_")
 
-        # Folder and image save
-        folder_name = f"{patient_name}_{patient_id}"
-        os.makedirs(folder_name, exist_ok=True)
-        image_path = os.path.join(folder_name, 'uploaded_image.jpg')
-        img.save(image_path)
+        # Save image temporarily
+        temp_image = BytesIO()
+        img.save(temp_image, format='BMP')
+        temp_image.seek(0)
 
-        # 🔽 Save temp BMP file and Predict
-        temp_bmp_path = "output.BMP"
-        img.save(temp_bmp_path)
-        prediction = pred_leaf_disease(temp_bmp_path)
+        # Predict
+        with open("temp.BMP", "wb") as f:
+            f.write(temp_image.read())
+
+        prediction = pred_leaf_disease("temp.BMP")
         prediction = str(disease_dic[prediction])
         precaution = prediction
 
-        # 🔁 Clean up temp file to reduce memory usage
-        if os.path.exists(temp_bmp_path):
-            os.remove(temp_bmp_path)
-
-        print(f"🩸 Blood Group: {prediction}")
-        print(f"📝 Patient: {patient_id}, {patient_name}, {age}, {date}, {gender}")
-
-        # Generate dynamic PDF filename
-        safe_name = patient_name.replace(" ", "_")
-        pdf_filename = f"medical_report_{safe_name}.pdf"
-        pdf_path = os.path.join(folder_name, pdf_filename)
-
-        # Create PDF
-        c = canvas.Canvas(pdf_path, pagesize=letter)
+        # Prepare PDF in memory
+        pdf_buffer = BytesIO()
+        c = canvas.Canvas(pdf_buffer, pagesize=letter)
         c.setFontSize(16)
         c.drawString(50, 750, "Medical Report")
-
         c.setFontSize(12)
         c.drawString(50, 700, f"Patient ID: {patient_id}")
         c.drawString(50, 680, f"Patient Name: {patient_name}")
@@ -109,22 +101,20 @@ def disease_prediction():
         c.drawString(50, 640, f"Date: {date}")
         c.drawString(50, 620, f"Gender: {gender}")
         c.drawString(50, 600, f"Predicted Blood Group: {prediction}")
-
-        try:
-            c.drawImage(image_path, 350, 600, width=150, height=150)
-        except Exception as e:
-            print("⚠️ Failed to embed image:", e)
-
         c.save()
 
-        return render_template('disease-result.html',
-                               prediction=prediction,
-                               precaution=precaution,
-                               title=title,
-                               folder_name=folder_name,
-                               pdf_file=pdf_filename)
+        # Clean up
+        os.remove("temp.BMP")
+
+        # Send PDF to client
+        pdf_buffer.seek(0)
+        return send_file(pdf_buffer,
+                         as_attachment=True,
+                         download_name=f"medical_report_{safe_name}.pdf",
+                         mimetype='application/pdf')
 
     return render_template('disease.html', title=title)
+
 
 
 # -----------------------------------------------
