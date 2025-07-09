@@ -25,13 +25,10 @@ download_model()
 # 🌐 FLASK IMPORTS & MODULES
 # ===============================================
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_file
 from markupsafe import Markup
 import numpy as np
 import pandas as pd
-
-import pickle
-import io
 from PIL import Image
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -66,34 +63,37 @@ def disease_prediction():
 
     if request.method == 'POST':
         file = request.files.get('file')
+        img = Image.open(file).convert('RGB')  # Ensure JPEG-safe format
 
-        img = Image.open(file)
-        img.save('output.BMP')
-
-        prediction = pred_leaf_disease("output.BMP")
-        prediction = str(disease_dic[prediction])
-
-        print("🩸 Blood group predicted:", prediction)
-
-        precaution = prediction  # Simple assignment here
-
-        # Fetch form details
+        # Form details
         patient_id = request.form.get('patient_id')
         patient_name = request.form.get('patient_name')
         age = request.form.get('age')
         date = request.form.get('date')
         gender = request.form.get('gender')
 
-        print(f"📝 Patient Info: {patient_id}, {patient_name}, {age}, {date}, {gender}")
-
-        # Create PDF folder & file
+        # Folder and image save
         folder_name = f"{patient_name}_{patient_id}"
         os.makedirs(folder_name, exist_ok=True)
+        image_path = os.path.join(folder_name, 'uploaded_image.jpg')
+        img.save(image_path)
 
-        pdf_file_name = f"{folder_name}/medical_report.pdf"
-        c = canvas.Canvas(pdf_file_name, pagesize=letter)
+        # Prediction
+        img.save('output.BMP')  # for prediction
+        prediction = pred_leaf_disease("output.BMP")
+        prediction = str(disease_dic[prediction])
+        precaution = prediction
 
-        # Fill the PDF with patient info
+        print(f"🩸 Blood Group: {prediction}")
+        print(f"📝 Patient: {patient_id}, {patient_name}, {age}, {date}, {gender}")
+
+        # Generate dynamic PDF filename
+        safe_name = patient_name.replace(" ", "_")
+        pdf_filename = f"medical_report_{safe_name}.pdf"
+        pdf_path = os.path.join(folder_name, pdf_filename)
+
+        # Create PDF
+        c = canvas.Canvas(pdf_path, pagesize=letter)
         c.setFontSize(16)
         c.drawString(50, 750, "Medical Report")
 
@@ -105,14 +105,32 @@ def disease_prediction():
         c.drawString(50, 620, f"Gender: {gender}")
         c.drawString(50, 600, f"Predicted Blood Group: {prediction}")
 
+        # Insert image in PDF
+        try:
+            c.drawImage(image_path, 350, 600, width=150, height=150)
+        except Exception as e:
+            print("⚠️ Failed to embed image:", e)
+
         c.save()
 
         return render_template('disease-result.html',
                                prediction=prediction,
                                precaution=precaution,
-                               title=title)
+                               title=title,
+                               folder_name=folder_name,
+                               pdf_file=pdf_filename)
 
     return render_template('disease.html', title=title)
+
+# -----------------------------------------------
+# Manual Report Download Endpoint
+# -----------------------------------------------
+@app.route('/download-report/<folder_name>/<pdf_file>')
+def download_report(folder_name, pdf_file):
+    file_path = os.path.join(folder_name, pdf_file)
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    return "Report not found", 404
 
 # ===============================================
 # 🔁 APP RUNNER
