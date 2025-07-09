@@ -5,10 +5,13 @@ __pycache__/
 # Ignore model weights
 *.h5
 
-# Ignore other large files
+# Ignore large files
 *.dll
 *.pyd
 
-# Ignore temporary files
+# Ignore dataset
+dataset_blood_group/
+
+# Temporary files
 *.log
 *.tmp
