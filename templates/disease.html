@@ -1,0 +1,74 @@
+{% extends 'layout.html' %} {% block body %}
+
+
+<style>
+  html body {
+    background-color: rgb(206, 206, 228);
+  }
+</style>
+<br /><br />
+  <h2 style="text-align: center; margin: 0px; color: black">
+    <b>Blood Grouping Detection Using Image Processing</b>
+  </h2>
+  <br />
+  <br>
+
+<div style="
+    width: 350px;
+    height: 50rem;
+    margin: 0px auto;
+    color: black;
+    border-radius: 25px;
+    padding: 10px 10px;
+    font-weight: bold;
+  ">
+
+  
+
+<form class="form-signin" method="post" enctype="multipart/form-data">
+
+  <h2 class="h4 mb-3 font-weight-normal"><b>Please Upload The Clear Image</b></h2>
+  <input type="file" name="file" class="form-control-file" id="inputfile" onchange="preview_image(event)" style="font-weight: bold;">
+  <br>
+  <br>
+  <img id="output-image" class="rounded mx-auto d-block" />
+  
+  <label for="patient-id" class="sr-only">Patient ID</label>
+  <input type="text" name="patient_id" id="patient-id" class="form-control" placeholder="ID" required autofocus>
+
+  <label for="patient-name" class="sr-only">Patient Name</label>
+  <input type="text" name="patient_name" id="patient-name" class="form-control" placeholder="Name" required autofocus>
+
+  <label for="age" class="sr-only">Age</label>
+  <input type="number" name="age" id="age" class="form-control" placeholder="Age" required>
+  
+  <label for="date" class="sr-only">Date</label>
+  <input type="date" name="date" id="date" class="form-control" placeholder="Date" required>
+  
+  <label for="gender" class="sr-only">Gender</label>
+  <select name="gender" id="gender" class="form-control" required>
+    <option value="" disabled selected>Select Gender</option>
+    <option value="male">Male</option>
+    <option value="female">Female</option>
+    <option value="other">Other</option>
+  </select>
+  
+  <button class="btn btn-lg btn-primary btn-block" type="submit" style="font-weight: bold;">Predict</button>
+
+</form>
+
+</div>
+
+<script type="text/javascript">
+  function preview_image(event) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var output = document.getElementById('output-image')
+      output.src = reader.result;
+    }
+    reader.readAsDataURL(event.target.files[0]);
+  }
+</script>
+
+</div>
+{% endblock %}
