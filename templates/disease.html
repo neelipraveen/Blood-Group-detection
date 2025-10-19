@@ -23,9 +23,12 @@
     font-weight: bold;
   ">
 
-  
-
-<form class="form-signin" method="post" enctype="multipart/form-data">
+  {% if error %}
+    <div class="alert alert-danger" role="alert">
+        <strong>Error:</strong> {{ error }}
+    </div>
+  {% endif %}
+  <form class="form-signin" method="post" enctype="multipart/form-data">
 
   <h2 class="h4 mb-3 font-weight-normal"><b>Please Upload The Clear Image</b></h2>
   <input type="file" name="file" class="form-control-file" id="inputfile" onchange="preview_image(event)" style="font-weight: bold;">
@@ -53,6 +56,7 @@
     <option value="other">Other</option>
   </select>
   
+  <br>
   <button class="btn btn-lg btn-primary btn-block" type="submit" style="font-weight: bold;">Predict</button>
 
 </form>

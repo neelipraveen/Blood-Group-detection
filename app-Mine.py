@@ -10,8 +10,8 @@ from reportlab.pdfgen import canvas
 # ===============================================
 # 🔽 MODEL DOWNLOAD FROM GOOGLE DRIVE
 # ===============================================
-MODEL_PATH = "model_blood_group_detection.h5"
-GDRIVE_FILE_ID = "1Ax6p_6hNrggVAtu2EN5qjzRmOEd5T8j1"
+MODEL_PATH = "New_final_save.h5"
+GDRIVE_FILE_ID = "1FDqoLJwv249YW-W1eaxQoxKj4pCaY67y"
 
 def download_model():
     if not os.path.exists(MODEL_PATH):
@@ -54,6 +54,18 @@ def disease_prediction():
 
     if request.method == 'POST':
         file = request.files.get('file')
+
+        # --- NEW: Check for file and file type ---
+        if not file or not file.filename:
+            error_message = "No file was uploaded. Please select a file."
+            return render_template('disease.html', title=title, error=error_message)
+
+        if not file.filename.lower().endswith('.bmp'):
+            error_message = "Invalid fingerprint image. Please upload a .BMP file."
+            return render_template('disease.html', title=title, error=error_message)
+        # --- End of new code ---
+
+        # If the file is valid, proceed as before
         img = Image.open(file).convert('RGB')
 
         # Save temp image for prediction

@@ -4,7 +4,7 @@ from tensorflow.keras.applications.imagenet_utils import preprocess_input
 from tensorflow.keras.models import load_model
 
 # Load the model once globally
-loaded_model_imageNet = load_model("model_blood_group_detection.h5")
+loaded_model_imageNet = load_model("New_final_save.h5")
 
 def pred_leaf_disease(image_path: str) -> int:
     """
